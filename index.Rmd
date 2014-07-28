@@ -1,0 +1,158 @@
+## Tornadoes Threaten Population Health
+
+#### Synopsis
+
+Tornadoes are a great threat to human health according to data from the National Climatic Data Center. 
+Tornadoes cause aproximately 1900 injuries and 170 fatalities a year, which is more than the combined effect of flash foods, excessive heat, and thunderstorm winds. 
+While tornadoes cause large numbers of injuries and fatalities, they cause comparatively less property damage. 
+Tornadoes cause approximately $2.9 billion of property damage a year, compared to $2.8 billion of damage from floods, $1.0 billion from flash floods, and $0.9 billion from storm surges. 
+The combined pricetag for different flooding events is greater than the pricetag for tornadoes. 
+Policymakers should point their attention first and foremost to tornadoes as they prepare for natural disasters in the future, yet they should also plan for flooding events, particularly if they are concerned about property damage.
+
+#### Data Processing
+
+The extreme weather dataset available from the National Climatic Data Center comes in the form of a large ".bz2" file. 
+Using the software R, it is efficient to read the first five rows of the data table, determine whether the columns are "character" or "numeric" vectors, and then read the whole dataset with the column classes specified.
+
+```{r, cache = TRUE}
+if(!file.exists("./data")) dir.create("./data")
+if(!file.exists("./data/stormdata.csv.bz2")) {
+fileUrl = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+download.file(fileUrl, destfile = "./data/stormdata.csv.bz2")
+}
+if(!exists("DF")) {
+tab5rows <- read.csv(bzfile("./data/stormdata.csv.bz2"), header = T, nrows = 5, 
+                     stringsAsFactors = F)
+classes <- sapply(tab5rows, class)
+classes <- sub("integer", "character", classes) ## These may not really be integers
+classes <- sub("logical", "character", classes) ## These may not really be logical values
+DF <- read.csv(bzfile("./data/stormdata.csv.bz2"), header = T, colClasses = classes, 
+               comment.char = "", nrows = 910000) ## This could take a while...
+}
+```
+
+The "EVTYPE" variable indicates the official designation for each extreme weather event. 
+In the early years of the NCDC storm database, the "EVTYPE" variable was not carefully coded, and there was an assortment of different "EVTYPE" designations. 
+The coding became much cleaner over time.
+
+```{r}
+df <- DF ## Create a working copy of the dataset
+
+## Get EVTYPE values since the first catalogued storm event in 1950
+levels(factor(df$EVTYPE))[1:20]
+```
+
+```{r}
+## Get EVTYPE values since 2000
+df$BGN_DATE <- as.Date(df$BGN_DATE, format = "%m/%d/%Y")
+df <- df[df$BGN_DATE >= "2000-1-01", ]
+levels(factor(df$EVTYPE))[1:20]
+```
+
+By December 1st, 2006, the National Weather Service and the National Climatic Data Center were using 48 official "EVTYPE" designations for extreme weather events.
+
+```{r}
+## Get EVTYPE values since 12/1/2006
+df <- df[df$BGN_DATE >= "2006-12-01", ]
+df$EVTYPE <- factor(df$EVTYPE)
+levels(df$EVTYPE)[1:20]
+```
+
+We have clipped the data at December 1st, 2006. It is important to explain why we have done so.
+
+- After 12/1/2006, the data appears to be coded carefully, according to rigorous standards. 
+Before this time, the data is of variable quality. 
+The older the data, the greater the possibility of corruption. 
+Corrupt data could skew an analysis and paint a false picture of extreme weather in America. 
+Separating the "true" data from the "corrupt" data is theoretically possible, but it is beyond the scope of this analysis.
+- We could potentially clip the data two months earlier. 
+Starting on 10/1/2006, the NWS and NCDC fully implemented the use of 48 official "EVTYPE" values. 
+By clipping the data on 12/1/2006, however, we get an even five years of records, from 12/1/2006 to 11/30/2011. 
+This makes the interpretation of data simple. 
+In particular, we can divide by five to get yearly averages.
+- Old data is hard to interpret. 
+A tornado or thunderstorm occuring today might cause more damage than it would have caused in 1990 because of population growth and urbanization in America. 
+There is also evidence that global warming ("global weirding") is increasing the frequency of natural disasters. 
+It is better to look at more recent data, so we get an accurate picture of the frequency and severity of weather events today.
+- By clipping the data at 12/1/2006, we could be ignoring potentially useful data. 
+There may be certain types of storms that occur rarely but exact a huge toll in human casualties and property damage. 
+These storms may be conspicuously absent in our clipped analysis. We must accept that the data are not perfect, but clipping the data at 12/1/2006 is the best strategy available to us.  
+
+Before we calculate results, we have to perform some minor cleaning of the property damage variable.
+
+```{r}
+df$PROPDMGEXP <- sub("0", "1", df$PROPDMGEXP)
+df$PROPDMGEXP <- sub("K", "1000", df$PROPDMGEXP)
+df$PROPDMGEXP <- sub("M", "1000000", df$PROPDMGEXP)
+df$PROPDMGEXP <- sub("B", "1000000000", df$PROPDMGEXP)
+df$PROPDMGEXP <- as.numeric(df$PROPDMGEXP)
+df$PROPDMG <- df$PROPDMG * df$PROPDMGEXP
+```
+
+#### Results
+
+Let's calculate the top ten causes of injuries and the top ten causes of fatalities due to extreme weather in America.
+
+```{r, fig.height = 8}
+df$EVTYPE <- tolower(df$EVTYPE) ## for easier reading
+library(reshape2)
+dfmelt <- melt(df, id.vars = "EVTYPE", measure.vars = c("FATALITIES", "INJURIES"))
+sumdf <- dcast(dfmelt, EVTYPE ~ variable, sum)
+top10inj <- sumdf[order(sumdf$INJURIES, decreasing = T), ][1:10, ]
+top10fat <- sumdf[order(sumdf$FATALITIES, decreasing = T), ][1:10, ]
+
+## Default colors in R are ugly. RColorBrewer does a better job.
+par(mfcol = c(2, 1), mar = c(0.5, 4.5, 3, 0.5))
+library(RColorBrewer)
+cols2 <- brewer.pal(10, "Set3")
+barplot(top10inj$INJURIES, col = cols2, ylab = "Number of Injuries",
+        main =c("Top Ten Causes of Injuries", "Dec 2006 - Nov 2011"))
+legend("topright", legend = top10inj$EVTYPE, fill = cols2)
+cols <- brewer.pal(10, "Paired")
+barplot(top10fat$FATALITIES, col = cols, ylab = "Number of Fatalities", 
+        main = c("Top Ten Causes of Fatalities", "Dec 2006 - Nov 2011"))
+legend("topright", legend = top10fat$EVTYPE, fill = cols)
+```
+
+Tornadoes are far and away the greatest threat to population health in America. 
+From December 2006 to November 2011, tornados caused 9661 injuries and 864 fatalities. 
+Thunderstorm wind, lightning, and heat-related events are among the next leading causes of injuries and fatalities. 
+Water-related events, such as flash floods, rip currents, and floods cause a great number of fatalities but relatively few injuries, perhaps because these events induce drowning more than other forms of harm.  
+
+Next, let's calculate the top ten causes of property damage due to extreme weather events.
+
+```{r}
+## I like the power and control of the "reshape2" package, as opposed to "aggregate"
+dfmelt <- melt(df, id.vars = "EVTYPE", measure.vars = "PROPDMG")
+sumdf <- dcast(dfmelt, EVTYPE ~ variable, sum)
+top10prop <- sumdf[order(sumdf$PROPDMG, decreasing = T), ][1:10, ]
+
+par(mfcol = c(1, 1), mar = c(0.5, 4.5, 2.5, 0.5))
+barplot(top10prop$PROPDMG, col = cols2, axes = F, ylab = "Amount of Property Damage",
+        main = c("Top Ten Causes of Property Damage", "Dec 2006 - Nov 2011"))
+legend("topright", legend = top10prop$EVTYPE, fill = cols2)
+axis(2, at = c(0, seq(2000000000, 16000000000, by = 2000000000)), 
+     labels = c("", "$2 Billion", "", "$6 Billion", "", "$10 Billion", "", 
+                "$14 Billion", ""))
+```
+
+Tornadoes and flooding cause 2.3 times as much damage as other extreme weather events. 
+Flooding causes a great deal of property damage, while it causes comparatively few injuries and fatalities. 
+This is because flooding tends to ruin buildings but leave the inhabitants of buildings unscathed.  
+
+#### Conclusion
+
+This analysis provides a good introduction to the weather events that are most harmful in America. 
+Nation-wide, policymakers should prioritize preparation for tornadoes and flood-related events above other natural disasters. 
+Tornadoes and flood are concentrated in specific regions of the United States. 
+It is unusual to hear of a tornado in Louisiana or a flood in Wyoming. 
+Policymakers should therefore prepare for national disasters locally; 
+they should consider what events are the most harmful in a particular region and prepare for those events.  
+
+This analysis yields different results, depending whether policymakers are interested in population health or property damage. 
+In terms of population health, tornadoes are the most harmful extreme weather event. 
+In terms of property damage, tornadoes are rivaled by flooding.  
+
+The results of this analysis are shaped by the precise definitions of the "EVTYPE" variables. 
+"flood", "flash flood", and "storm surge/tide" are all analyzed individually, yet these are related events. 
+In the future, "EVTYPE" categories should be redefined depending on the reason for the analysis and the particular questions being asked.
