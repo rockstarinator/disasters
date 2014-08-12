@@ -2,12 +2,15 @@
 
 #### Synopsis
 
-Tornadoes are a great threat to human health according to data from the National Climatic Data Center. 
-Tornadoes cause aproximately 1900 injuries and 170 fatalities a year, which is more than the combined effect of flash foods, excessive heat, and thunderstorm winds. 
+Tornadoes are a great threat to human health, according to data from the National Climatic Data Center. 
+Tornadoes cause aproximately 1900 injuries and 170 fatalities a year.
 While tornadoes cause large numbers of injuries and fatalities, they cause comparatively less property damage. 
 Tornadoes cause approximately $2.9 billion of property damage a year, compared to $2.8 billion of damage from floods, $1.0 billion from flash floods, and $0.9 billion from storm surges. 
 The combined pricetag for different flooding events is greater than the pricetag for tornadoes. 
-Policymakers should point their attention first and foremost to tornadoes as they prepare for natural disasters in the future, yet they should also plan for flooding events, particularly if they are concerned about property damage.
+Policymakers should point their attention first and foremost to tornadoes as they prepare for natural disasters in the future, yet they should also plan for flooding events, particularly if they are concerned with property damage.
+
+What follows is a technical document describing the analysis of a large data set from the National Climatic Data Center.
+
 
 #### Data Processing
 
@@ -26,18 +29,17 @@ tab5rows <- read.csv(bzfile("./data/stormdata.csv.bz2"), header = T, nrows = 5,
 classes <- sapply(tab5rows, class)
 classes <- sub("integer", "character", classes) ## These may not really be integers
 classes <- sub("logical", "character", classes) ## These may not really be logical values
-DF <- read.csv(bzfile("./data/stormdata.csv.bz2"), header = T, colClasses = classes, 
+df <- read.csv(bzfile("./data/stormdata.csv.bz2"), header = T, colClasses = classes, 
                comment.char = "", nrows = 910000) ## This could take a while...
 }
 ```
 
-The "EVTYPE" variable indicates the official designation for each extreme weather event. 
-In the early years of the NCDC storm database, the "EVTYPE" variable was not carefully coded, and there was an assortment of different "EVTYPE" designations. 
+The "EVTYPE" variable gives a basic description for every extreme weather events. 
+In the early years of the NCDC storm database, the "EVTYPE" variable was not coded carefully:
+there was typos and inconsistent labelling. 
 The coding became much cleaner over time.
 
 ```{r}
-df <- DF ## Create a working copy of the dataset
-
 ## Get EVTYPE values since the first catalogued storm event in 1950
 levels(factor(df$EVTYPE))[1:20]
 ```
@@ -72,11 +74,13 @@ This makes the interpretation of data simple.
 In particular, we can divide by five to get yearly averages.
 - Old data is hard to interpret. 
 A tornado or thunderstorm occuring today might cause more damage than it would have caused in 1990 because of population growth and urbanization in America. 
-There is also evidence that global warming ("global weirding") is increasing the frequency of natural disasters. 
-It is better to look at more recent data, so we get an accurate picture of the frequency and severity of weather events today.
+The inflation of the American dollar makes it difficult to compare property damage when storms are separated by long intervals of time.
+There is also evidence that global warming ("global weirding") is increasing the frequency of natural disasters.
+For these reasons, it is better to look at more recent data, so we get an accurate picture of the frequency and severity of weather events today.
 - By clipping the data at 12/1/2006, we could be ignoring potentially useful data. 
 There may be certain types of storms that occur rarely but exact a huge toll in human casualties and property damage. 
-These storms may be conspicuously absent in our clipped analysis. We must accept that the data are not perfect, but clipping the data at 12/1/2006 is the best strategy available to us.  
+These storms may be conspicuously absent in our clipped analysis. 
+We must accept that the data are not perfect, but clipping the data at 12/1/2006 is the best strategy available to us.  
 
 Before we calculate results, we have to perform some minor cleaning of the property damage variable.
 
@@ -117,7 +121,6 @@ legend("topright", legend = top10fat$EVTYPE, fill = cols)
 Tornadoes are far and away the greatest threat to population health in America. 
 From December 2006 to November 2011, tornados caused 9661 injuries and 864 fatalities. 
 Thunderstorm wind, lightning, and heat-related events are among the next leading causes of injuries and fatalities. 
-Water-related events, such as flash floods, rip currents, and floods cause a great number of fatalities but relatively few injuries, perhaps because these events induce drowning more than other forms of harm.  
 
 Next, let's calculate the top ten causes of property damage due to extreme weather events.
 
@@ -136,15 +139,16 @@ axis(2, at = c(0, seq(2000000000, 16000000000, by = 2000000000)),
                 "$14 Billion", ""))
 ```
 
-Tornadoes and flooding cause 2.3 times as much damage as other extreme weather events. 
-Flooding causes a great deal of property damage, while it causes comparatively few injuries and fatalities. 
-This is because flooding tends to ruin buildings but leave the inhabitants of buildings unscathed.  
+Tornadoes and flooding cause 2.3 times as much damage as other extreme weather events.
+If we combine floods, flash floods, and storm surges, the property damage is greater than the property damage caused by tornadoes.
+We see that flooding causes a great deal of property damage; however, we discovered earlier that flooding causes few injuries and fatalities. 
+It seems that flooding ruins buildings but leaves the inhabitants of buildings unscathed.  
 
 #### Conclusion
 
 This analysis provides a good introduction to the weather events that are most harmful in America. 
 Nation-wide, policymakers should prioritize preparation for tornadoes and flood-related events above other natural disasters. 
-Tornadoes and flood are concentrated in specific regions of the United States. 
+However, tornadoes and flood are concentrated in specific regions of the United States. 
 It is unusual to hear of a tornado in Louisiana or a flood in Wyoming. 
 Policymakers should therefore prepare for national disasters locally; 
 they should consider what events are the most harmful in a particular region and prepare for those events.  
